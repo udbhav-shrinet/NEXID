@@ -4,26 +4,34 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Activity, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
 import CryptoCard, { CryptoCardProps } from "@/components/CryptoCard";
-import StockDetailModal from "@/components/StockDetailModal";
+import StockDetailModal from '@/components/StockDetailModal';
+import { FALLBACK_CRYPTOS } from '@/lib/crypto-data';
 
 export default function DashboardPage() {
-  const [cryptos, setCryptos] = useState<CryptoCardProps[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCryptos: CryptoCardProps[] = Object.values(FALLBACK_CRYPTOS).slice(0, 6).map(c => ({
+    symbol: c.symbol,
+    name: c.name,
+    price: c.price,
+    change: c.change,
+    changePercent: c.changesPercentage,
+  }));
+
+  const [cryptos, setCryptos] = useState<CryptoCardProps[]>(initialCryptos);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoCardProps | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchDashboardData = async () => {
-    setIsLoading(true);
-    setError(null);
+    setIsRefreshing(true);
     try {
       const response = await fetch('/api/crypto');
       if (!response.ok) {
-        throw new Error('Failed to fetch data from the server.');
+        throw new Error('Could not fetch live market data');
       }
       const data = await response.json();
 
-      const formattedData: CryptoCardProps[] = (Array.isArray(data) ? data : []).map((crypto: any) => ({
+      const formattedData: CryptoCardProps[] = (Array.isArray(data) && data.length > 0 ? data : initialCryptos).map((crypto: any) => ({
         symbol: crypto.symbol,
         name: crypto.name,
         price: crypto.price,
@@ -32,8 +40,10 @@ export default function DashboardPage() {
       }));
       setCryptos(formattedData);
     } catch (err: any) {
-      setError(err.message);
-      setCryptos([]);
+      console.warn('Live API unavailable, retaining fallback dataset:', err);
+      if (cryptos.length === 0) {
+        setCryptos(initialCryptos);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

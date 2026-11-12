@@ -5,11 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import CryptoCard, { CryptoCardProps } from "@/components/CryptoCard";
 import StockDetailModal from "@/components/StockDetailModal";
+import { FALLBACK_CRYPTOS } from '@/lib/crypto-data';
 
 export default function CryptoPage() {
+  const initialCryptos: CryptoCardProps[] = Object.values(FALLBACK_CRYPTOS).map(c => ({
+    symbol: c.symbol,
+    name: c.name,
+    price: c.price,
+    change: c.change,
+    changePercent: c.changesPercentage,
+  }));
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [cryptos, setCryptos] = useState<CryptoCardProps[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [cryptos, setCryptos] = useState<CryptoCardProps[]>(initialCryptos);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoCardProps | null>(null);
 
@@ -26,10 +35,14 @@ export default function CryptoPage() {
           const response = await fetch(`/api/crypto/all?search=${encodeURIComponent(searchTerm.trim())}`);
           if (!response.ok) throw new Error('Could not fetch data. Please try again later.');
           const data = await response.json();
-          setCryptos(Array.isArray(data) ? data : []);
+          setCryptos(Array.isArray(data) && data.length > 0 ? data : initialCryptos);
         } catch (err: any) {
-          setError(err.message);
-          setCryptos([]);
+          console.warn('API error, filtering fallback crypto list:', err);
+          const term = searchTerm.trim().toLowerCase();
+          const filtered = initialCryptos.filter(c => 
+            c.symbol.toLowerCase().includes(term) || c.name.toLowerCase().includes(term)
+          );
+          setCryptos(filtered);
         } finally {
           setIsLoading(false);
         }
