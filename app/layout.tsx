@@ -24,8 +24,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <GoogleAnalytics />
       <body className={`${inter.variable} font-sans`}>
+        <GoogleAnalytics />
         {/* We are wrapping the entire app structure with the AuthProvider */}
         <AuthProvider>
           <div className="flex min-h-screen bg-background">
